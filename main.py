@@ -21,7 +21,7 @@ db = SQLAlchemy(model_class=Base)
 db.init_app(app)
 
 # CREATE TABLE IN DB
-class User(db.Model, UserMixin):
+class User(UserMixin, db.Model):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     email: Mapped[str] = mapped_column(String(100), unique=True)
     password: Mapped[str] = mapped_column(String(100))
@@ -32,7 +32,7 @@ with app.app_context():
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.get_id(user_id)
+    return db.session.get(User, int(user_id))
 
 @app.route('/')
 def home():
@@ -40,34 +40,51 @@ def home():
 
 @app.route('/register', methods=['GET','POST'])
 def register():
+    if current_user.is_authenticated:
+        return redirect(url_for("secrets"))
+
     if request.method == 'POST':
         new_user = User(
             email=request.form['email'],
-            password=request.form['password'],
+            password=generate_password_hash(request.form['password']),
             name=request.form['name'],
         )
 
         db.session.add(new_user)
         db.session.commit()
-        return render_template("secrets.html", user=new_user)
+        login_user(new_user)
+        return redirect(url_for("secrets"))
 
     return render_template("register.html")
 
-@app.route('/login')
+@app.route('/login', methods=['GET','POST'])
 def login():
+    if current_user.is_authenticated:
+        return redirect(url_for("secrets"))
+
+    if request.method == 'POST':
+        user = db.session.execute(db.select(User).where(User.email == request.form['email'])).scalar()
+
+        if user is None or not check_password_hash(user.password, request.form['password']):
+            return redirect(url_for('login'))
+
+        if check_password_hash(user.password, request.form['password']):
+            login_user(user)
+            return redirect(url_for("secrets"))
+
     return render_template("login.html")
 
 
 @app.route('/secrets')
 @login_required
 def secrets():
-    return render_template("secrets.html")
+    return render_template("secrets.html", user=current_user)
 
 
 @app.route('/logout')
-@login_required
 def logout():
-    pass
+    logout_user()
+    return redirect(url_for('home'))
 
 @app.route('/download')
 @login_required
