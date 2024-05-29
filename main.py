@@ -4,9 +4,10 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy import Integer, String
 from flask_login import UserMixin, login_user, LoginManager, login_required, current_user, logout_user
+import os
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'secret-key-goes-here'
+app.config['SECRET_KEY'] = os.environ.get("SECRET_KEY")
 
 # CREATE DATABASE
 class Base(DeclarativeBase):
