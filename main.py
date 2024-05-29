@@ -4,9 +4,10 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy import Integer, String
 from flask_login import UserMixin, login_user, LoginManager, login_required, current_user, logout_user
+import os
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'secret-key-goes-here'
+app.config['SECRET_KEY'] = os.environ.get("SECRET_KEY")
 
 # CREATE DATABASE
 class Base(DeclarativeBase):
@@ -31,8 +32,19 @@ def home():
     return render_template("index.html")
 
 
-@app.route('/register')
+@app.route('/register', methods=['GET','POST'])
 def register():
+    if request.method == 'POST':
+        new_user = User(
+            email=request.form['email'],
+            password=request.form['password'],
+            name=request.form['name'],
+        )
+
+        db.session.add(new_user)
+        db.session.commit()
+        return render_template("secrets.html", user=new_user)
+
     return render_template("register.html")
 
 
