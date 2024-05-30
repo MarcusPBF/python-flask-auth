@@ -44,6 +44,12 @@ def register():
         return redirect(url_for("secrets"))
 
     if request.method == 'POST':
+        user = db.session.execute(db.select(User).where(User.email == request.form['email'])).scalar()
+
+        if user is not None:
+            flash("Email already exists in the database. Please use another email.")
+            return redirect(url_for('register'))
+
         new_user = User(
             email=request.form['email'],
             password=generate_password_hash(request.form['password']),
@@ -52,6 +58,7 @@ def register():
 
         db.session.add(new_user)
         db.session.commit()
+
         login_user(new_user)
         return redirect(url_for("secrets"))
 
@@ -66,6 +73,7 @@ def login():
         user = db.session.execute(db.select(User).where(User.email == request.form['email'])).scalar()
 
         if user is None or not check_password_hash(user.password, request.form['password']):
+            flash("Invalid Username and/or password. Please try again.")
             return redirect(url_for('login'))
 
         if check_password_hash(user.password, request.form['password']):
